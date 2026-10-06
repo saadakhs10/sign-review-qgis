@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plugins>
+  <pyqgis_plugin name="Sign Review" version="1.5.0" plugin_id="sign_review">
+    <description><![CDATA[Review road-sign detections on one screen: photos sorted Left | Right of the camera, one best photo per sign, points moved from the camera to the sign in bulk.]]></description>
+    <about><![CDATA[Select a cluster of road-sign detections (points with img_link, boxes, heading, original_x / original_y) and click Sign Review. The plugin shows every photo cropped to its bounding box, sorted Left | Right of the camera, groups the photos of the same physical sign (DBSCAN), highlights the nearest uncut photo of every sign and moves points from the camera to the sign with the camera geometry (heading + angle, distance from the box width), keeping them off the road. Lasso selection, Select all, Relocate, Reset to camera, Delete, Nearby + Snap together, Map, Street View and full-photo view. Pure geometry - no AI models, no cloud: the only network traffic is downloading the photos from the links in your layer.]]></about>
+    <version>1.5.0</version>
+    <qgis_minimum_version>3.16.0</qgis_minimum_version>
+    <qgis_maximum_version>4.99.0</qgis_maximum_version>
+    <homepage><![CDATA[https://github.com/saadakhs10/sign-review-qgis]]></homepage>
+    <file_name>sign_review.zip</file_name>
+    <icon>https://raw.githubusercontent.com/saadakhs10/sign-review-qgis/main/sign_review/icons/icon.png</icon>
+    <author_name><![CDATA[Saad Ahmed Khan]]></author_name>
+    <download_url>https://github.com/saadakhs10/sign-review-qgis/releases/download/v1.5.0/sign_review.zip</download_url>
+    <uploaded_by><![CDATA[saadakhs10]]></uploaded_by>
+    <create_date>2026-10-06</create_date>
+    <update_date>2026-10-06</update_date>
+    <experimental>False</experimental>
+    <deprecated>False</deprecated>
+    <tracker><![CDATA[https://github.com/saadakhs10/sign-review-qgis/issues]]></tracker>
+    <repository><![CDATA[https://github.com/saadakhs10/sign-review-qgis]]></repository>
+    <tags><![CDATA[road signs, review, localization, mobile mapping, triangulation, dbscan, quality control]]></tags>
+    <downloads>0</downloads>
+    <average_vote>0</average_vote>
+    <rating_votes>0</rating_votes>
+  </pyqgis_plugin>
+</plugins>

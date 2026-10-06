@@ -1,0 +1,60 @@
+SIGN REVIEW - LIBRARIES USED
+============================
+
+Nothing has to be installed with pip. Everything below comes with QGIS (3.16 or newer,
+including QGIS 4) or with Python itself.
+
+
+1. QGIS PYTHON API (PyQGIS) - comes with QGIS
+---------------------------------------------
+qgis.core
+    QgsFeatureRequest              read points from the layer (by id, by rectangle)
+    QgsGeometry, QgsPointXY        build the new point when a point is moved
+    QgsWkbTypes                    point or multipoint layer
+    QgsRectangle                   search box for the Nearby feature
+    QgsCoordinateReferenceSystem   WGS 84 (EPSG:4326)
+    QgsCoordinateTransform         WGS 84 <-> the layer CRS (e.g. EPSG:3857)
+    QgsProject                     the open project (needed by the transform)
+qgis.gui
+    QgsHighlight                   yellow / blue highlight of selected points on the map
+    QgsMapToolEmitPoint            the 📍 Nearby map-click tool
+qgis.utils
+    iface                          the QGIS window: map canvas, message bar, toolbar, menu
+
+
+2. QT FOR THE WINDOWS (qgis.PyQt = PyQt5 or PyQt6) - comes with QGIS
+--------------------------------------------------------------------
+qgis.PyQt.QtCore      Qt, QRect, QPoint, QSize, QTimer, QUrl
+qgis.PyQt.QtGui       QImage, QImageReader (decode only the sign area), QPixmap, QPainter,
+                      QPen, QColor (draw the red box), QDesktopServices (open Street View)
+qgis.PyQt.QtWidgets   QDialog, QFrame, QLabel, QPushButton, QCheckBox, QComboBox,
+                      QDoubleSpinBox, QSpinBox, QScrollArea, QGridLayout, QVBoxLayout,
+                      QHBoxLayout, QLayout, QRubberBand (the lasso), QMessageBox,
+                      QProgressDialog (downloads with Cancel), QApplication, QAction
+
+
+3. PYTHON STANDARD LIBRARY - comes with Python
+----------------------------------------------
+math                  angle, distance, curb offset, metres <-> degrees, DBSCAN, least squares
+os                    file paths of the photo cache
+tempfile              the cache folder (system temp folder / qgis_sign_review)
+urllib.request        download the photos from img_link
+hashlib               file name of a cached photo (MD5 of its link)
+json                  remember sign fingerprints and sharpness between runs
+re                    read numbers from the confidence field
+ast                   read the boxes field "[(x1, y1, x2, y2)]"
+time                  wait loop while photos download
+concurrent.futures    ThreadPoolExecutor - 12 downloads at the same time
+
+
+4. ONLY FOR BUILDING / TESTING (scripts/ folder, not needed to use the plugin)
+------------------------------------------------------------------------------
+zipfile, configparser, argparse, datetime     scripts/build_zip.py (makes sign_review.zip + plugins.xml)
+importlib, sys                                scripts/run_in_python_console.py (run from source in QGIS)
+
+
+NOT USED
+--------
+No AI or machine-learning libraries (no OpenCV, CLIP, OCR, scikit-learn, numpy).
+DBSCAN, least squares, the look fingerprint (dHash) and the sharpness measure
+(Tenengrad / Sobel) are written in plain Python in sign_review/core/.

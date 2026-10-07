@@ -1,0 +1,75 @@
+# Every commit to main that changes the plugin builds sign_review.zip and plugins.xml
+# and publishes them as a GitHub release. QGIS users then see the update under
+# Plugins > Manage and Install Plugins > Upgradeable.
+#
+# Version: the "version" in sign_review/metadata.txt. If that version was already
+# released, the build number is added (1.5.1 -> 1.5.1.7) so QGIS still sees an update.
+# Works whether the plugin is at the top of the repository or inside a folder.
+name: Build and release plugin
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '**/sign_review/**'
+      - '**/build_zip.py'
+      - '.github/workflows/release.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Find the plugin folder
+        id: dir
+        run: |
+          META=$(find . -path '*/sign_review/metadata.txt' -not -path '*/dist/*' | head -1)
+          if [ -z "$META" ]; then echo "sign_review/metadata.txt not found"; exit 1; fi
+          ROOT=$(dirname "$(dirname "$META")")
+          echo "root=$ROOT" >> "$GITHUB_OUTPUT"
+          echo "Plugin found in $ROOT"
+
+      - name: Check the code compiles
+        working-directory: ${{ steps.dir.outputs.root }}
+        run: python -m compileall -q sign_review
+
+      - name: Work out the version
+        id: ver
+        working-directory: ${{ steps.dir.outputs.root }}
+        run: |
+          BASE=$(python -c "import configparser; c = configparser.ConfigParser(interpolation=None); c.read('sign_review/metadata.txt', encoding='utf-8'); print(c['general']['version'])")
+          if git rev-parse -q --verify "refs/tags/v$BASE" >/dev/null; then
+            VER="$BASE.${{ github.run_number }}"
+          else
+            VER="$BASE"
+          fi
+          echo "version=$VER" >> "$GITHUB_OUTPUT"
+          echo "Releasing version $VER"
+
+      - name: Build sign_review.zip and plugins.xml
+        working-directory: ${{ steps.dir.outputs.root }}
+        run: python scripts/build_zip.py --github-user "${{ github.repository_owner }}" --version "${{ steps.ver.outputs.version }}"
+
+      - name: Publish the release
+        working-directory: ${{ steps.dir.outputs.root }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "v${{ steps.ver.outputs.version }}" dist/sign_review.zip plugins.xml \
+            --title "Sign Review ${{ steps.ver.outputs.version }}" \
+            --notes "**Install:** QGIS > Plugins > Manage and Install Plugins > Install from ZIP > sign_review.zip
+
+          **Update automatically:** add the plugin repository
+          https://github.com/${{ github.repository }}/releases/latest/download/plugins.xml" \
+            --latest

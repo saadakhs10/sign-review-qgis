@@ -234,3 +234,5 @@ or use **Plugins → Sign Review → Report an issue** in QGIS.
 [github.com/saadakhs10](https://github.com/saadakhs10)
 
 Released under the [GPL-2.0-or-later](LICENSE) licence, like QGIS itself.
+   ![Downloads](https://img.shields.io/github/downloads/saadakhs10/sign-review-qgis/latest/sign_review.zip?label=downloads&color=187D68)
+   

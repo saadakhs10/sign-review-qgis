@@ -1,3 +1,4 @@
+--   ![Downloads](https://img.shields.io/github/downloads/saadakhs10/sign-review-qgis/latest/sign_review.zip?label=downloads&color=187D68)-
 <p align="center">
   <img src="sign_review/icons/icon_256.png" width="110" alt="Sign Review icon">
 </p>
@@ -20,7 +21,7 @@
   <img src="docs/images/main_window.jpg" width="900" alt="Sign Review window: photos cropped to each sign, sorted Left and Right of the camera">
 </p>
 
---   ![Downloads](https://img.shields.io/github/downloads/saadakhs10/sign-review-qgis/latest/sign_review.zip?label=downloads&color=187D68)-
+
 
 ## Why this plugin exists
 

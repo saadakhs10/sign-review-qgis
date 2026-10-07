@@ -27,7 +27,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 from qgis.PyQt.QtCore import Qt, QTimer
 from qgis.PyQt.QtWidgets import (QApplication, QDialog, QVBoxLayout, QLabel,
-                                 QPushButton, QDoubleSpinBox)
+                                 QPushButton, QDoubleSpinBox, QSpinBox)
 from qgis.core import (QgsCoordinateTransform, QgsProject)
 from qgis.utils import iface
 
@@ -54,7 +54,16 @@ from ..features.f11_map_street_photo import MapStreetMixin
 from ..features.f12_closest_photos import ClosestPhotosMixin
 
 
-class Reviewer(PhotoDataMixin,       # block 1  fields + photos
+class PageSpin(QSpinBox):
+    """Page number box. Enter jumps to the page and is not passed on to the window
+    (otherwise it would also press a button)."""
+    def keyPressEvent(self, e):
+        super().keyPressEvent(e)
+        if e.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
+            e.accept()
+
+
+class Reviewer(PhotoDataMixin,      # block 1  fields + photos
                DistanceMixin,        # block 2  camera angle + distance
                LeftRightMixin,       # block 3  Left | Right
                SameSignMixin,        # block 4  same sign (DBSCAN)
@@ -124,7 +133,17 @@ class Reviewer(PhotoDataMixin,       # block 1  fields + photos
         self.btn_best.setStyleSheet('font-weight:bold; padding:4px 12px;')
         self.btn_best.setToolTip('Open a window with the best photo of every sign: nearest to the '
                                  'camera and not cut off - sorted Left | Right')
-        for w in (self.btn_prev, self.btn_next):
+        # ---- jump to a page: type the number and press Enter (or use the arrows / mouse wheel) ----
+        self.sp_page = PageSpin()
+        self.sp_page.setRange(1, 1)
+        self.sp_page.setPrefix('Page ')
+        self.sp_page.setKeyboardTracking(False)
+        self.sp_page.setToolTip('Type a page number and press Enter to jump to it')
+        self.sp_page.valueChanged.connect(lambda v: self.goto(v - 1))
+        self.lbl_pages = QLabel('/ 1')
+        for b in (self.btn_prev, self.btn_next):
+            b.setAutoDefault(False)
+        for w in (self.btn_prev, self.sp_page, self.lbl_pages, self.btn_next):
             top.addWidget(w)
         top.addWidget(self.btn_best)
         self.btn_near = QPushButton('📍 Nearby')
@@ -170,7 +189,7 @@ class Reviewer(PhotoDataMixin,       # block 1  fields + photos
         lay.addWidget(self.sel_bar)
         lay.addLayout(info)
         hint = QLabel('Drag = lasso select  |  Click = select/unselect  |  Shift+click = select a run  |  '
-                      'Tick box = select  |  Right-click = full photo  |  ← → = page')
+                      'Tick box = select  |  Right-click = full photo  |  ← → = page  |  Type a page no. + Enter = jump')
         hint.setWordWrap(True)
         hint.setStyleSheet('color:#607d8b;')
         lay.addWidget(hint)
@@ -307,6 +326,11 @@ class Reviewer(PhotoDataMixin,       # block 1  fields + photos
 
     def update_status(self):
         self.status.setText(f'Page {self.page + 1} / {self.pages}')
+        self.sp_page.blockSignals(True)
+        self.sp_page.setRange(1, self.pages)
+        self.sp_page.setValue(self.page + 1)
+        self.sp_page.blockSignals(False)
+        self.lbl_pages.setText(f'/ {self.pages}')
 
     def cleanup(self, *args):
         """Runs when the window is closed (X button, Esc or a new run)."""

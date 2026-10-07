@@ -15,7 +15,7 @@
   <img alt="Qt5 and Qt6" src="https://img.shields.io/badge/Qt-5%20%7C%206-41CD52">
   <img alt="No AI, no cloud" src="https://img.shields.io/badge/AI%20models-none-0D3B66">
   <a href="LICENSE"><img alt="License GPL-2.0-or-later" src="https://img.shields.io/badge/license-GPL--2.0--or--later-blue"></a>
-  --   ![Downloads](https://img.shields.io/github/downloads/saadakhs10/sign-review-qgis/latest/sign_review.zip?label=downloads&color=187D68)-
+ <img alt="Downloads" src="https://img.shields.io/github/downloads/saadakhs10/sign-review-qgis/latest/sign_review.zip?label=downloads&color=187D68">
 </p>
 
 <p align="center">

@@ -5,7 +5,7 @@ qgisMaximumVersion=4.99
 supportsQt6=True
 description=Review road-sign detections on one screen: photos sorted Left | Right of the camera, one best photo per sign, points moved from the camera to the sign in bulk.
 about=Select a cluster of road-sign detections (points with img_link, boxes, heading, original_x / original_y) and click Sign Review. The plugin shows every photo cropped to its bounding box, sorted Left | Right of the camera, groups the photos of the same physical sign (DBSCAN), highlights the nearest uncut photo of every sign and moves points from the camera to the sign with the camera geometry (heading + angle, distance from the box width), keeping them off the road. Lasso selection, Select all, Relocate, Reset to camera, Delete, Nearby + Snap together, Map, Street View and full-photo view. Pure geometry - no AI models, no cloud: the only network traffic is downloading the photos from the links in your layer.
-version=1.5.1
+version=1.5.2
 author=Saad Ahmed Khan
 email=khansaadahmed10@gmail.com
 homepage=https://github.com/saadakhs10/sign-review-qgis
@@ -17,6 +17,8 @@ icon=icons/icon.png
 experimental=False
 deprecated=False
 changelog=
+    1.5.2- Page number box: type a page number and press Enter to jump to it. Includes the photo download fix from 1.5.1.
+    1.5.1 - Fix: photos that failed to load once are downloaded again; failed downloads are retried.
     1.5.0 - Published on GitHub (saadakhs10/sign-review-qgis) with automatic releases; Help and Report-an-issue links in the plugin menu; comments cleaned up
     1.4.0 - Code split into one file per feature (sign_review/features/, blocks 1-12); docs/CODE_MAP.md and LIBRARIES.txt added. No change in behaviour
     1.3.3 - Fix: after changing the Nearby distance or page, an old photo tile could stay on screen as a duplicate

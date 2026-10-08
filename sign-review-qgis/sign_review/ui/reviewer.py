@@ -34,7 +34,7 @@ from qgis.utils import iface
 from ..config import (LINK_FIELD, BOX_FIELD, HEADING_FIELD, ORIG_X_FIELD, ORIG_Y_FIELD, CONF_FIELD,
                       PER_PAGE, MAX_WHOLE_LAYER, COLS, THREADS, CAMERA_HFOV_DEG,
                       SIGN_WIDTH_M, MIN_DIST_M, MAX_DIST_M, CURB_OFFSET_M, GROUP_DIST_M,
-                      HASH_FILE, SHARP_FILE, WGS84)
+                      HASH_FILE, SHARP_FILE, WGS84, MARK_COLOR)
 from ..core.io import fetch
 from ..core.imaging import render
 from .widgets import TileGrid, clear_grid, FlowLayout, labelled, make_window, fit_to_screen
@@ -52,6 +52,8 @@ from ..features.f09_nearby_snap import NearbyMixin
 from ..features.f10_delete import DeleteMixin
 from ..features.f11_map_street_photo import MapStreetMixin
 from ..features.f12_closest_photos import ClosestPhotosMixin
+from ..features.f13_mark_worked import MarkWorkedMixin
+from ..features.f14_my_best import MyBestMixin
 
 
 class PageSpin(QSpinBox):
@@ -74,6 +76,8 @@ class Reviewer(PhotoDataMixin,      # block 1  fields + photos
                DeleteMixin,          # block 10 Delete
                MapStreetMixin,       # block 11 Map / Street / full photo
                ClosestPhotosMixin,   # block 12 Closest photos window
+               MarkWorkedMixin,      # block 13 colour of relocated points
+               MyBestMixin,          # block 14 ⭐ My best window
                TileGrid, QDialog):
     """The review window: builds the buttons and the grid, pages through the photos.
     Every feature lives in its own block in sign_review/features/."""
@@ -114,6 +118,8 @@ class Reviewer(PhotoDataMixin,      # block 1  fields + photos
         self.sides, self.road_axis = {}, None
         self._busy = False
         self.near_tool = None
+        self.picked = self.load_picked()
+        self._items_all = None
 
         self.widths = {}
         self.hashes, self.sharp = {}, {}
@@ -146,6 +152,12 @@ class Reviewer(PhotoDataMixin,      # block 1  fields + photos
         for w in (self.btn_prev, self.sp_page, self.lbl_pages, self.btn_next):
             top.addWidget(w)
         top.addWidget(self.btn_best)
+        self.btn_my_best = QPushButton('⭐ My best (0)')
+        self.btn_my_best.setAutoDefault(False)
+        self.btn_my_best.setStyleSheet('font-weight:bold; padding:4px 12px;')
+        self.btn_my_best.setToolTip('The photos you moved out with ⭐ - in their own window, '
+                                    'apart from the rest')
+        top.addWidget(self.btn_my_best)
         self.btn_near = QPushButton('📍 Nearby')
         self.btn_near.setCheckable(True)
         self.btn_near.setStyleSheet('QPushButton {font-weight:bold; padding:4px 12px;}'
@@ -153,6 +165,16 @@ class Reviewer(PhotoDataMixin,      # block 1  fields + photos
         self.btn_near.setToolTip('Switch on, then click a point on the MAP: a window shows it together '
                                  'with every point placed near it.  Right-click on the map = switch off')
         top.addWidget(self.btn_near)
+        self.btn_mark = QPushButton('🎨 Colour relocated')
+        self.btn_mark.setCheckable(True)
+        self.btn_mark.setChecked(True)
+        self.btn_mark.setAutoDefault(False)
+        self.btn_mark.setStyleSheet('QPushButton {padding:4px 12px;}'
+                                    f'QPushButton:checked {{background:{MARK_COLOR}; color:white; font-weight:bold;}}')
+        self.btn_mark.setToolTip('On: points you have relocated (moved away from the camera position) are '
+                                 'drawn in this colour on the map, so you know which areas are done.\n'
+                                 'Off: the layer is drawn with its normal colours.')
+        top.addWidget(self.btn_mark)
 
         rel = FlowLayout()
         self.sp_fov = self.spin(10, 180, CAMERA_HFOV_DEG, 1, '°')
@@ -200,7 +222,9 @@ class Reviewer(PhotoDataMixin,      # block 1  fields + photos
         self.btn_prev.clicked.connect(lambda: self.goto(self.page - 1))
         self.btn_next.clicked.connect(lambda: self.goto(self.page + 1))
         self.btn_best.clicked.connect(self.open_best)
+        self.btn_my_best.clicked.connect(self.open_my_best)
         self.btn_near.toggled.connect(self.toggle_near_tool)
+        self.btn_mark.toggled.connect(self.mark_layer)
         for sp in (self.sp_fov, self.sp_sign, self.sp_min, self.sp_max):
             sp.valueChanged.connect(lambda *_: self.regroup_timer.start())
         self.sp_group.valueChanged.connect(lambda *_: self.regroup_timer.start())
@@ -216,6 +240,7 @@ class Reviewer(PhotoDataMixin,      # block 1  fields + photos
         self.layer.selectionChanged.connect(self.on_selection_changed)
         self.finished.connect(self.cleanup)
 
+        self.mark_layer(True)
         self.load_items()
 
     @staticmethod
@@ -235,6 +260,7 @@ class Reviewer(PhotoDataMixin,      # block 1  fields + photos
         n_sel = self.layer.selectedFeatureCount()
         if not n_sel and self.layer.featureCount() > MAX_WHOLE_LAYER:
             self.items, self.info, self.sign_members, self.sign_no, self.best = [], {}, {}, {}, {}
+            self._items_all = None
             self.pages, self.page = 1, 0
             clear_grid(self.grid)
             self.tiles = []
@@ -242,6 +268,7 @@ class Reviewer(PhotoDataMixin,      # block 1  fields + photos
                                     f'{self.layer.featureCount()} points (limit {MAX_WHOLE_LAYER}, see config.py)')
             self.update_status()
             self.update_best_folder()
+            self.update_my_best()
             return
         feats = self.layer.selectedFeatures() if n_sel else self.layer.getFeatures()
         self.items, self.info = [], {}
@@ -255,14 +282,16 @@ class Reviewer(PhotoDataMixin,      # block 1  fields + photos
         else:
             self.source_lbl.setText(f'<b>Reviewing the WHOLE layer ({len(self.items)} points)</b>')
         self.order_items()
+        self.split_picked()
         self.sides, self.road_axis = self.classify_sides(self.order())
-        keep = set(self.order())
+        keep = set(self.all_fids())
         self.selected &= keep
         if self.anchor not in keep:
             self.anchor = None
         self.goto(0)
         self.selection_changed()
         self.update_best_folder()
+        self.update_my_best()
         for b in list(self.bars):
             b.update_state()
 
@@ -302,6 +331,9 @@ class Reviewer(PhotoDataMixin,      # block 1  fields + photos
                 t.best = True
                 t.cap.setText('<span style="color:#2e7d32;font-weight:bold">★ BEST</span>  ' + t.cap.text())
                 t.refresh()
+            if self.is_moved(fid):
+                t.cap.setText(t.cap.text() + f'<br><span style="color:{MARK_COLOR};font-weight:bold">'
+                              '✓ relocated</span>')
             fl = self.flags.get(fid)
             if fl:
                 t.cap.setText(t.cap.text() + '<br><span style="color:#e53935;font-weight:bold">⚠ '

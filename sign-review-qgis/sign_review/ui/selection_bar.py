@@ -12,7 +12,7 @@ class SelectionBar(QFrame):
     """'N selected' + Select all, then Clear / Reset to camera / Relocate / Delete
     (active once something is selected)."""
 
-    def __init__(self, rv):
+    def __init__(self, rv, my_best=False):
         super().__init__()
         self.rv = rv
         self.setStyleSheet('SelectionBar {background:#e3f2fd; border:1px solid #90caf9; border-radius:4px;}')
@@ -35,7 +35,12 @@ class SelectionBar(QFrame):
                 ('Relocate', rv.relocate_selected,
                  'background:#1e88e5;color:white;font-weight:bold;padding:4px 10px;'),
                 ('Delete', rv.delete_selected,
-                 'background:#e53935;color:white;font-weight:bold;padding:4px 10px;')):
+                 'background:#e53935;color:white;font-weight:bold;padding:4px 10px;'),
+                # block 14: move the selected photos to the ⭐ My best window, or back
+                (('↩ Back to review', rv.unpick_selected,
+                  'background:#757575;color:white;font-weight:bold;padding:4px 10px;') if my_best else
+                 ('⭐ Move to My best', rv.pick_selected,
+                  'background:#f9a825;color:black;font-weight:bold;padding:4px 10px;'))):
             b = QPushButton(text)
             b.setFocusPolicy(Qt.FocusPolicy.NoFocus)
             if style:

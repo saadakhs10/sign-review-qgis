@@ -9,10 +9,8 @@ import re
 
 from qgis.core import QgsFeatureRequest
 
-from ..core.io import cached, fetch, image_size
+from ..core.io import cached, fetch, known_size, probe, save_sizes
 from ..core.parsing import parse_boxes, largest_box, to_float
-from ..ui.widgets import wait_for
-
 from ..ui.widgets import wait_for
 
 
@@ -86,18 +84,14 @@ class PhotoDataMixin:
 
     # ── 1.9  width_of() : photo width in pixels (W) ───────────────────────────────────────────
     def width_of(self, fid):
-        """Pixel width of the point's image (None if not downloaded yet)."""
-        url = self.get_info(fid)['url']
-        if not url:
-            return None
-        return image_size(cached(url))[0]
+        """Pixel width of the point's image (None if not known yet)."""
+        s = known_size(self.get_info(fid)['url'])
+        return s[0] if s else None
 
     # ── 1.10  height_of() : photo height in pixels ────────────────────────────────────────────
     def height_of(self, fid):
-        url = self.get_info(fid)['url']
-        if not url:
-            return None
-        return image_size(cached(url))[1]
+        s = known_size(self.get_info(fid)['url'])
+        return s[1] if s else None
 
     # ── 1.11  photo_id() : same photo = same camera position + heading ────────────────────────
     def photo_id(self, fid):
@@ -117,6 +111,21 @@ class PhotoDataMixin:
             if url and not cached(url) and str(url) not in todo:
                 todo[str(url)] = self.pool.submit(fetch, url)
         return wait_for(todo.values(), label, self)
+
+    # ── 1.12b ensure_sizes() : photo sizes only (fast - no full download) ──────────────────────
+    def ensure_sizes(self, fids, label):
+        """Learn W and H of every photo by reading only the first bytes of each file
+        (12 at a time). Full photos are downloaded later, page by page.
+        Returns False if the user pressed Cancel."""
+        todo = {}
+        for f in fids:
+            url = self.get_info(f)['url']
+            if url and str(url) not in todo and not known_size(url):
+                todo[str(url)] = self.pool.submit(probe, url)
+        ok = wait_for(todo.values(), label, self)
+        if todo:
+            save_sizes()
+        return ok
 
     # ── 1.13  caption() : text under a tile: fid | distance | angle ───────────────────────────
     def caption(self, fid, extra=''):

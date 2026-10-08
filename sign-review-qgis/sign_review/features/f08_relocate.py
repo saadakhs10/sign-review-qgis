@@ -16,11 +16,7 @@ from qgis.core import (QgsGeometry, QgsPointXY, QgsWkbTypes)
 from qgis.utils import iface
 
 from ..config import (ORIG_X_FIELD, ORIG_Y_FIELD)
-from ..core.io import fetch, image_width
 from ..core.parsing import largest_box
-from ..ui.widgets import wait_for
-
-from ..ui.widgets import wait_for
 
 
 class RelocateMixin:
@@ -68,15 +64,14 @@ class RelocateMixin:
             'Undo works until you Save Layer Edits; "Reset to camera" puts them back.')
         if ans != QMessageBox.StandardButton.Yes:
             return
-        futs = {fid: self.pool.submit(fetch, self.get_info(fid)['url']) for fid in fids}
-        if not wait_for(futs.values(), 'Downloading images…', self):
+        if not self.ensure_sizes(fids, 'Reading photo sizes…'):
             return
 
         self.ensure_editing()
         self.layer.beginEditCommand('Relocate signs')
         moved, skipped = [], []
         for fid in fids:
-            est = self.estimate(fid, image_width(futs[fid].result()))
+            est = self.estimate(fid, self.width_of(fid))
             if est is None:
                 skipped.append(fid)
                 continue
@@ -140,3 +135,4 @@ class RelocateMixin:
         self.sync_selection_highlights()
         self.layer.triggerRepaint()
         self.canvas.refresh()
+        self.mark_tiles(fids)

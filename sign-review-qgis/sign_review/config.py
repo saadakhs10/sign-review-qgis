@@ -52,6 +52,11 @@ NEARBY_MAX_M    = 500.0
 # 🧲 Snap together: points closer than this to the snap spot already count as together
 SNAP_TOL_M = 0.01
 
+# Points you have worked on (moved away from their camera position by Relocate, Snap together
+# or by hand) are drawn in this colour on the map; switch it off with the 🎨 button
+MARK_COLOR   = '#ff00ff'       # magenta
+MARK_MOVED_M = 0.3             # moved more than this (metres) from original_x / original_y = worked on
+
 # Relocate cross-check: a relocated point farther than this from where the board's OTHER photos
 # put it is marked "⚠ check" (the estimate is kept) - can be changed in the window
 CHECK_TOL_M = 4.0

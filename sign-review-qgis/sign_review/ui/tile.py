@@ -59,6 +59,16 @@ class Tile(QFrame):
             b.setFixedHeight(20)
             b.clicked.connect(lambda _=False, f=fn: f(self.fid))
             btns.addWidget(b)
+        if hasattr(dlg, 'pick_toggle'):                     # block 14: ⭐ My best / ↩ Back
+            back = getattr(self.owner, 'is_my_best', False)
+            b = QPushButton('↩ Back' if back else '⭐')
+            b.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+            b.setStyleSheet('font-size: 10px; padding: 1px 4px;')
+            b.setFixedHeight(20)
+            b.setToolTip('Back to the main window' if back else
+                         'Move this photo to the ⭐ My best window')
+            b.clicked.connect(lambda _=False: dlg.pick_toggle(self.fid))
+            btns.addWidget(b)
         lay.addWidget(self.img, 0, Qt.AlignmentFlag.AlignHCenter)
         lay.addLayout(info)
         lay.addLayout(btns)

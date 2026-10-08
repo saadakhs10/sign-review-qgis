@@ -13,8 +13,6 @@ from ..ui.widgets import TileGrid, wait_for, clear_grid, make_window, fit_to_scr
 from ..ui.selection_bar import SelectionBar
 from ..ui.tile import Tile
 
-from ..ui.widgets import clear_grid, wait_for, TileGrid
-
 
 class ClosestPhotosMixin:
     """📁 closest photos window - mixed into the review window."""
@@ -22,7 +20,7 @@ class ClosestPhotosMixin:
     # ── 12.1  open_best() : 📁 Closest photos button ───────────────────────────────────────────
     def open_best(self):
         for d in self.same_dialogs:
-            if isinstance(d, BestDialog):
+            if type(d) is BestDialog:           # not the ⭐ My best window (a subclass)
                 d.reload()
                 d.raise_()
                 return
@@ -31,10 +29,10 @@ class ClosestPhotosMixin:
     # ── 12.2  update_best_folder() : count on the button, refresh the window ──────────────────
     def update_best_folder(self):
         """Folder button shows how many signs; an open folder window follows the review."""
-        n = len([f for f in self.best.values() if f in set(self.order())])
+        n = len([f for f in self.best.values() if f in set(self.all_fids())])
         self.btn_best.setText(f'📁 Closest photos ({n})')
         for d in list(self.same_dialogs):
-            if isinstance(d, BestDialog):
+            if type(d) is BestDialog:
                 d.reload()
 
 
@@ -53,7 +51,7 @@ class BestDialog(TileGrid, QDialog):
         scroll = self.make_grid()
         make_window(self)
         fit_to_screen(self, *self.size_for(COLS, 800))
-        self.sel_bar = SelectionBar(rv)
+        self.sel_bar = SelectionBar(rv, my_best=getattr(self, 'is_my_best', False))
         lay = QVBoxLayout(self)
         lay.addWidget(self.sel_bar)
         lay.addWidget(self.info_lbl)
@@ -65,9 +63,18 @@ class BestDialog(TileGrid, QDialog):
     def order(self):
         return list(self.matches)
 
+    def fids_to_show(self):
+        all_ = set(self.rv.all_fids())
+        return [f for f in self.rv.best.values() if f in all_]
+
+    def info_text(self, left):
+        n = len(self.matches)
+        return (f'<b>{n} signs</b> – best photo of each (nearest to the camera, not cut '
+                f'off): {left} left of camera, {n - left} right')
+
     def reload(self):
         rv = self.rv
-        fids = [f for f in rv.best.values() if f in set(rv.order())]
+        fids = self.fids_to_show()
         futs = [rv.pool.submit(fetch, rv.get_info(f)['url']) for f in fids]
         if not wait_for(futs, 'Downloading images…', self):
             return
@@ -82,13 +89,15 @@ class BestDialog(TileGrid, QDialog):
             extra = f'sign {n} ({len(rv.sign_members.get(n, []))} photos)' if n else ''
             t = Tile(rv, f, render(paths[f], rv.get_info(f)['boxes'], True),
                      rv.caption(f, extra), owner=self)
+            if f in rv.best.values():
+                t.best = True
+                t.refresh()
             self.tiles.append(t)
         self._cols = self.fit_cols()
         self.flow(self.tiles)
         rv.extra_tiles.extend(self.tiles)
         left = sum(1 for f in self.matches if self.sides.get(f) == 'L')
-        self.info_lbl.setText(f'<b>{len(self.matches)} signs</b> – best photo of each (nearest to the camera, not cut '
-                              f'off): {left} left of camera, {len(self.matches) - left} right')
+        self.info_lbl.setText(self.info_text(left))
 
     def on_close(self, *args):
         self.rv.forget_tiles(self.tiles)

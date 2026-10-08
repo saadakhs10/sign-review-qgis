@@ -62,7 +62,7 @@ class SameSignMixin:
         self.sign_no, self.sign_members, self.sign_pos = {}, {}, {}
         self.flags, self.rays, self.L = {}, {}, None
         fids = [i[0] for i in self.items]
-        if not fids or not self.ensure_downloads(fids, 'Downloading photos…'):
+        if not fids or not self.ensure_sizes(fids, 'Reading photo sizes…'):
             return
         cams = [self.get_info(f)['cam'] for f in fids if self.get_info(f)['cam']]
         if not cams:
@@ -252,7 +252,9 @@ class SameSignMixin:
         """Settings changed -> group and locate the signs again."""
         base = self.source_lbl.text().split('   –   ')[0]
         self.source_lbl.setText(base)
+        self.unsplit()
         self.order_items()
+        self.split_picked()
         self.sides, self.road_axis = self.classify_sides(self.order())
         self.goto(min(self.page, self.pages - 1))
         self.selection_changed()

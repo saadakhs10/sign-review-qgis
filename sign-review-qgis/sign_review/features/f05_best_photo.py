@@ -106,8 +106,9 @@ class BestPhotoMixin:
 
     # ── 5.7  rel_sharpness() : sharpness compared with the sharpest close-up ──────────────────
     def rel_sharpness(self, members):
-        """{fid: sharpness / sharpest} for the close-up photos of one sign."""
-        near = self.near_set(members)
+        """{fid: sharpness / sharpest} for the close-up photos of one sign.
+        Only photos already downloaded are compared (no download just for this)."""
+        near = [f for f in self.near_set(members) if cached(self.get_info(f)['url'])]
         if len(near) < 2:
             return {}
         width = max(8, min(64, min(self.box_width(f) for f in near)))

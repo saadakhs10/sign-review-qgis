@@ -343,6 +343,10 @@ class Reviewer(PhotoDataMixin,      # block 1  fields + photos
         self._cols = self.fit_cols()
         self.flow(self.tiles)
         self.update_status()
+        if new_page:                                   # a new page always starts at the top
+            self.scroll.verticalScrollBar().setValue(0)
+            QTimer.singleShot(0, lambda: self.scroll.verticalScrollBar().setValue(0))
+         
 
     def keyPressEvent(self, e):
         if self.handle_select_keys(self, e):

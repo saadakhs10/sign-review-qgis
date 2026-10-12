@@ -301,6 +301,7 @@ class Reviewer(PhotoDataMixin,      # block 1  fields + photos
     def goto(self, n):
         if n < 0 or n >= self.pages:
             return
+        new_page = n != self.page
         self.page = n
         items = self.page_items(n)
         self.status.setText('Downloading images…')

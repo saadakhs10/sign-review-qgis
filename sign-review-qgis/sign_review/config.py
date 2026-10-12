@@ -25,8 +25,8 @@ LOW_CONF      = 0.50          # detector confidence below this -> "low conf"
 OUTLIER_M     = 3.0           # photo's ray misses its sign's position by more than this -> "off-ray"
 
 
-PER_PAGE   = 24               # tiles per page
-MAX_WHOLE_LAYER = 300         # with nothing selected, only load the whole layer if it is this small
+PER_PAGE   = 50               # tiles per page
+MAX_WHOLE_LAYER = 500         # with nothing selected, only load the whole layer if it is this small
 COLS       = 4                # tiles per row (narrow window so the map stays visible)
 THUMB      = 220              # tile size in pixels
 PAD        = 150              # pixels of context around the box when cropping

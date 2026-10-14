@@ -22,7 +22,6 @@ RELOCATE (camera position -> sign)
 Nothing is saved until you press Save Layer Edits; Undo (Ctrl+Z) works until then."""
 
 import json
-import time
 from concurrent.futures import ThreadPoolExecutor
 
 from qgis.PyQt.QtCore import Qt, QTimer
@@ -32,11 +31,11 @@ from qgis.core import (QgsCoordinateTransform, QgsProject)
 from qgis.utils import iface
 
 from ..config import (LINK_FIELD, BOX_FIELD, HEADING_FIELD, ORIG_X_FIELD, ORIG_Y_FIELD, CONF_FIELD,
-                      PER_PAGE, MAX_WHOLE_LAYER, COLS, THREADS, CAMERA_HFOV_DEG,
+                      PER_PAGE, MAX_WHOLE_LAYER, COLS, THREADS, PREFETCH_PAGES, THUMB_KEEP, CAMERA_HFOV_DEG,
                       SIGN_WIDTH_M, MIN_DIST_M, MAX_DIST_M, CURB_OFFSET_M, GROUP_DIST_M,
                       HASH_FILE, SHARP_FILE, WGS84, MARK_COLOR)
-from ..core.io import fetch
-from ..core.imaging import render
+from ..core.loader import PriorityLoader
+from ..core.imaging import load_thumb
 from .widgets import TileGrid, clear_grid, FlowLayout, labelled, make_window, fit_to_screen
 from .selection_bar import SelectionBar
 from .tile import Tile
@@ -100,7 +99,12 @@ class Reviewer(PhotoDataMixin,      # block 1  fields + photos
         self.to_layer = QgsCoordinateTransform(WGS84, layer.crs(), QgsProject.instance())
         self.to_wgs = QgsCoordinateTransform(layer.crs(), WGS84, QgsProject.instance())
 
-        self.pool = ThreadPoolExecutor(THREADS)
+        self.pool = ThreadPoolExecutor(THREADS)          # sizes, hashes, other windows
+        self.loader = PriorityLoader(THREADS, load_thumb, THUMB_KEEP)  # page on screen first
+        self._waiting = []                                # (tile, future) still loading
+        self.fill_timer = QTimer(self)                    # puts arrived photos into their tiles
+        self.fill_timer.setInterval(60)
+        self.fill_timer.timeout.connect(self.fill_tiles)
         self.items, self.tiles, self.extra_tiles = [], [], []
         self.selected, self.anchor = set(), None
         self.bars, self.same_dialogs = [], []
@@ -299,26 +303,34 @@ class Reviewer(PhotoDataMixin,      # block 1  fields + photos
         return self.items[n * PER_PAGE:(n + 1) * PER_PAGE]
 
     def goto(self, n):
+        """The page appears at once: every tile is drawn straight away with its caption, buttons
+        and tick box, and each photo fills in the moment it arrives - one slow photo no longer
+        holds up the other 49. Photos of the next pages load in the background, after this one."""
         if n < 0 or n >= self.pages:
             return
         new_page = n != self.page
         self.page = n
         items = self.page_items(n)
-        self.status.setText('Downloading images…')
-        QApplication.processEvents()
 
-        futs = [self.pool.submit(fetch, url) for _, url, _ in items]
-        while not all(f.done() for f in futs):
-            QApplication.processEvents()
-            time.sleep(0.05)
-        for m in (n + 1, n + 2):
+        # priority 0 = page on screen (top tiles first)
+        # 1, 2     = next two pages: downloaded AND cut into thumbnails -> appear at once
+        # 3        = page before (going back)
+        # 4 ...    = further pages: downloaded only, while you review (no memory used)
+        self.loader.demote()
+        futs = [self.loader.submit(self._thumb_key(url, boxes), 0, url, boxes) for _, url, boxes in items]
+        for k, m in ((1, n + 1), (2, n + 2), (3, n - 1)):
+            if 0 <= m < self.pages:
+                for _, url, boxes in self.page_items(m):
+                    self.loader.submit(self._thumb_key(url, boxes), k, url, boxes)
+        for m in range(n + 3, min(self.pages, n + 1 + PREFETCH_PAGES)):
             for _, url, _ in self.page_items(m):
-                self.pool.submit(fetch, url)
+                if url:
+                    self.loader.submit(('download', str(url)), m - n + 1, url, None, False)
 
         clear_grid(self.grid)
         self.tiles = []
+        self._waiting = []
         for (fid, url, boxes), fut in zip(items, futs):
-            pix = render(fut.result(), boxes, True)
             sign = self.sign_no.get(fid)
             extra = ''
             if sign:
@@ -327,7 +339,12 @@ class Reviewer(PhotoDataMixin,      # block 1  fields + photos
             rs = self.rel.get(fid)
             if rs is not None:
                 extra += f'  |  sharp {rs * 100:.0f}%'
-            t = Tile(self, fid, pix, self.caption(fid, extra))
+            t = Tile(self, fid, None, self.caption(fid, extra))
+            if fut.done():                              # already loaded (cache / prefetch)
+                t.set_image(self._result(fut))
+            else:
+                t.show_loading()
+                self._waiting.append((t, fut))
             if sign and self.best.get(sign) == fid:
                 t.best = True
                 t.cap.setText('<span style="color:#2e7d32;font-weight:bold">★ BEST</span>  ' + t.cap.text())
@@ -343,10 +360,42 @@ class Reviewer(PhotoDataMixin,      # block 1  fields + photos
         self._cols = self.fit_cols()
         self.flow(self.tiles)
         self.update_status()
+        if self._waiting:
+            self.fill_timer.start()
         if new_page:                                   # a new page always starts at the top
             self.scroll.verticalScrollBar().setValue(0)
             QTimer.singleShot(0, lambda: self.scroll.verticalScrollBar().setValue(0))
          
+
+    @staticmethod
+    def _thumb_key(url, boxes):
+        return (str(url), tuple(boxes or ()))
+
+    @staticmethod
+    def _result(fut):
+        try:
+            return fut.result()
+        except Exception:
+            return None
+
+    def fill_tiles(self):
+        """Every 60 ms: put the photos that have arrived into their tiles."""
+        still = []
+        for t, fut in self._waiting:
+            if not fut.done():
+                still.append((t, fut))
+                continue
+            try:
+                t.set_image(self._result(fut))
+            except RuntimeError:                        # tile already gone (page changed)
+                pass
+        self._waiting = still
+        if still:
+            self.status.setText(f'Page {self.page + 1} / {self.pages}   ·   loading '
+                                f'{len(self.tiles) - len(still)} / {len(self.tiles)} photos…')
+        else:
+            self.fill_timer.stop()
+            self.update_status()
 
     def keyPressEvent(self, e):
         if self.handle_select_keys(self, e):
@@ -376,6 +425,9 @@ class Reviewer(PhotoDataMixin,      # block 1  fields + photos
         except Exception:
             pass
         self.reload_timer.stop()
+        self.fill_timer.stop()
+        self._waiting = []
+        self.loader.shutdown()
         if self.near_tool is not None:
             self.btn_near.setChecked(False)
         self.clear_selection_highlights()

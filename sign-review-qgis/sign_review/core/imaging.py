@@ -108,7 +108,7 @@ def bit_distance(a, b):
 
 
 def render(path, boxes, crop=True, size=THUMB):
-        """Thumbnail with the red box (QPixmap - GUI thread only)."""
+    """Thumbnail with the red box (QPixmap - GUI thread only)."""
     img = render_image(path, boxes, crop, size)
     return QPixmap.fromImage(img) if img is not None else None
 

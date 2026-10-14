@@ -230,7 +230,6 @@ def probe(url):
     for attempt in range(RETRIES):
         try:
             found = []
-
             def header_found(data):
                 if len(data) >= 16 and not is_image_bytes(data[:16]):
                     raise ValueError('reply is not an image')

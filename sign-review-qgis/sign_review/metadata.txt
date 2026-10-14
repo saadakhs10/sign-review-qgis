@@ -5,7 +5,7 @@ qgisMaximumVersion=4.99
 supportsQt6=True
 description=Review road-sign detections on one screen: photos sorted Left | Right of the camera, one best photo per sign, points moved from the camera to the sign in bulk.
 about=Select a cluster of road-sign detections (points with img_link, boxes, heading, original_x / original_y) and click Sign Review. The plugin shows every photo cropped to its bounding box, sorted Left | Right of the camera, groups the photos of the same physical sign (DBSCAN), highlights the nearest uncut photo of every sign and moves points from the camera to the sign with the camera geometry (heading + angle, distance from the box width), keeping them off the road. Lasso selection, Select all, Relocate, Reset to camera, Delete, Nearby + Snap together, Map, Street View and full-photo view. Pure geometry - no AI models, no cloud: the only network traffic is downloading the photos from the links in your layer.
-version=1.5.7
+version=1.5.8
 author=Saad Ahmed Khan
 email=khansaadahmed10@gmail.com
 homepage=https://github.com/saadakhs10/sign-review-qgis
@@ -17,6 +17,7 @@ icon=icons/icon.png
 experimental=False
 deprecated=False
 changelog=
+    1.5.8 - Faster pages: tiles appear at once and each photo fills in as it arrives; the page on screen downloads first, the next 2 pages are ready to show instantly and up to 20 pages ahead download while you review; going back to a page is instant; download connections are kept open. Fix: points vanishing and reappearing on zoom / pan (the 'relocated' colour rule was slowing every map redraw) + picture per page 100 and 5 in one row
     1.5.7 - No of tile per page increase to 50 from 24 and total no of tiles shows when nothing selected in whole layer increase from 300 to 500 
     1.5.6 - Fix: a new page now always opens at the top
     1.5.5 - New: ⭐ My best - put the photos you choose in their own window, apart from the rest (⭐ on a tile or 'Move to My best' in the blue bar; ↩ Back returns them). Remembered per layer

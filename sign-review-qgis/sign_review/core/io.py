@@ -14,6 +14,7 @@ import hashlib
 import http.client
 import json
 import struct
+import threading
 import urllib.parse
 import urllib.request
 
@@ -119,7 +120,6 @@ def _read_some(r, limit, on_chunk):
     return data
 
 
-
 def cache_path(url):
     return os.path.join(CACHE, hashlib.md5(url.encode()).hexdigest() + '.img')
 
@@ -178,12 +178,10 @@ def fetch(url):
     for attempt in range(RETRIES):
         try:
             data = http_get(url)
-
             if not is_image_bytes(data[:16]):
                 raise ValueError('reply is not an image (%d bytes, starts %r)' % (len(data), data[:20]))
             path = cache_path(url)
             tmp = '%s.%s.%d.%d.part' % (path, socket.gethostname(), os.getpid(), threading.get_ident())
-
             with open(tmp, 'wb') as f:
                 f.write(data)
             os.replace(tmp, path)
@@ -321,6 +319,7 @@ def probe(url):
     for attempt in range(RETRIES):
         try:
             found = []
+
             def header_found(data):
                 if len(data) >= 16 and not is_image_bytes(data[:16]):
                     raise ValueError('reply is not an image')
@@ -331,7 +330,6 @@ def probe(url):
 
             http_get(url, limit=PROBE_MAX, on_chunk=header_found)
             s = found[0] if found else None
-
             if s and s[0] > 0 and s[1] > 0:
                 with _LOCK:
                     _known()[url] = (int(s[0]), int(s[1]))

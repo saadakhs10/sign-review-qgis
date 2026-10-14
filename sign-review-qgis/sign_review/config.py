@@ -25,9 +25,9 @@ LOW_CONF      = 0.50          # detector confidence below this -> "low conf"
 OUTLIER_M     = 3.0           # photo's ray misses its sign's position by more than this -> "off-ray"
 
 
-PER_PAGE   = 50               # tiles per page
+PER_PAGE   = 100               # tiles per page
 MAX_WHOLE_LAYER = 500         # with nothing selected, only load the whole layer if it is this small
-COLS       = 4                # tiles per row (narrow window so the map stays visible)
+COLS       = 5                # tiles per row (narrow window so the map stays visible)
 THUMB      = 220              # tile size in pixels
 PAD        = 150              # pixels of context around the box when cropping
 THREADS    = 12               # parallel downloads
@@ -65,7 +65,9 @@ CHECK_TOL_M = 4.0
 LOOK_TOLERANCE  = 8
 # ------------------------------------------
 
-CACHE = os.path.join(tempfile.gettempdir(), 'qgis_sign_review')
+# Team on one network: set the environment variable SIGN_REVIEW_CACHE to a shared folder;
+# a photo one person has opened is then instant for everyone else.
+CACHE = os.environ.get('SIGN_REVIEW_CACHE') or os.path.join(tempfile.gettempdir(), 'qgis_sign_review')
 os.makedirs(CACHE, exist_ok=True)
 HASH_FILE = os.path.join(CACHE, 'sign_hashes.json')
 SHARP_FILE = os.path.join(CACHE, 'sign_sharpness.json')

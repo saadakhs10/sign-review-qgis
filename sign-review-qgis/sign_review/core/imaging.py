@@ -108,7 +108,16 @@ def bit_distance(a, b):
 
 
 def render(path, boxes, crop=True, size=THUMB):
-    """Thumbnail with the red box. With crop=True only the area around the box is decoded."""
+        """Thumbnail with the red box (QPixmap - GUI thread only)."""
+    img = render_image(path, boxes, crop, size)
+    return QPixmap.fromImage(img) if img is not None else None
+
+
+def render_image(path, boxes, crop=True, size=THUMB):
+    """Thumbnail with the red box as a QImage. Safe in a worker thread (QPixmap is not), so
+    the decoding and scaling happen while downloading, not in the window.
+    With crop=True only the area around the box is decoded."""
+
     if not path:
         return None
     w, h = image_size(path)
@@ -132,6 +141,14 @@ def render(path, boxes, crop=True, size=THUMB):
     for x1, y1, x2, y2 in boxes:
         p.drawRect(QRect(x1 - r.x(), y1 - r.y(), x2 - x1, y2 - y1))
     p.end()
-    return QPixmap.fromImage(img).scaled(size, size,
-                                         Qt.AspectRatioMode.KeepAspectRatio,
-                                         Qt.TransformationMode.SmoothTransformation)
+    return img.scaled(size, size, Qt.AspectRatioMode.KeepAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation)
+
+
+def load_thumb(key, url, boxes=None, thumb=True):
+    """Worker-thread job of the photo loader: download (or take from cache) + thumbnail.
+    thumb=False: only download into the cache (pages further ahead - no memory used)."""
+    path = fetch(url)
+    if not thumb:
+        return None
+    return render_image(path, boxes, True)

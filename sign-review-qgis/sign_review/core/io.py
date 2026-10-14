@@ -91,7 +91,8 @@ def fetch(url):
             if not is_image_bytes(data[:16]):
                 raise ValueError('reply is not an image (%d bytes, starts %r)' % (len(data), data[:20]))
             path = cache_path(url)
-            tmp = '%s.%d.part' % (path, threading.get_ident())
+            tmp = '%s.%s.%d.%d.part' % (path, socket.gethostname(), os.getpid(), threading.get_ident())
+
             with open(tmp, 'wb') as f:
                 f.write(data)
             os.replace(tmp, path)
@@ -228,19 +229,19 @@ def probe(url):
     error = None
     for attempt in range(RETRIES):
         try:
-            req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-            data, s = b'', None
-            with urllib.request.urlopen(req, timeout=TIMEOUT_S) as r:
-                while len(data) < PROBE_MAX:
-                    chunk = r.read(16384)
-                    if not chunk:
-                        break
-                    data += chunk
-                    if len(data) >= 16 and not is_image_bytes(data[:16]):
-                        raise ValueError('reply is not an image')
-                    s = header_size(data)
-                    if s:
-                        break
+            found = []
+
+            def header_found(data):
+                if len(data) >= 16 and not is_image_bytes(data[:16]):
+                    raise ValueError('reply is not an image')
+                hs = header_size(data)
+                if hs:
+                    found.append(hs)
+                return bool(hs)
+
+            http_get(url, limit=PROBE_MAX, on_chunk=header_found)
+            s = found[0] if found else None
+
             if s and s[0] > 0 and s[1] > 0:
                 with _LOCK:
                     _known()[url] = (int(s[0]), int(s[1]))

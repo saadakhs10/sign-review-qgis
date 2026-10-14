@@ -108,7 +108,7 @@ def bit_distance(a, b):
 
 
 def render(path, boxes, crop=True, size=THUMB):
-        """Thumbnail with the red box (QPixmap - GUI thread only)."""
+    """Thumbnail with the red box (QPixmap - GUI thread only)."""
     img = render_image(path, boxes, crop, size)
     return QPixmap.fromImage(img) if img is not None else None
 
@@ -117,7 +117,6 @@ def render_image(path, boxes, crop=True, size=THUMB):
     """Thumbnail with the red box as a QImage. Safe in a worker thread (QPixmap is not), so
     the decoding and scaling happen while downloading, not in the window.
     With crop=True only the area around the box is decoded."""
-
     if not path:
         return None
     w, h = image_size(path)
@@ -142,7 +141,7 @@ def render_image(path, boxes, crop=True, size=THUMB):
         p.drawRect(QRect(x1 - r.x(), y1 - r.y(), x2 - x1, y2 - y1))
     p.end()
     return img.scaled(size, size, Qt.AspectRatioMode.KeepAspectRatio,
-                    Qt.TransformationMode.SmoothTransformation)
+                      Qt.TransformationMode.SmoothTransformation)
 
 
 def load_thumb(key, url, boxes=None, thumb=True):

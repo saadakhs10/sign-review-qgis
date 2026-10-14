@@ -7,11 +7,14 @@ file already in the cache is deleted and downloaded again. Failed downloads are 
 a few times, and tried again later instead of being given up for the whole session."""
 
 import os
+import socket
+import ssl
 import time
 import hashlib
+import http.client
 import json
 import struct
-import threading
+import urllib.parse
 import urllib.request
 
 from qgis.PyQt.QtGui import QImageReader
@@ -26,6 +29,95 @@ _FAILED = {}
 _SIZES = {}
 _VALID = set()
 _LOCK = threading.Lock()
+
+
+# ── Keep-alive connections ───────────────────────────────────────────────────────────────────
+# urllib opens a new connection (TCP + TLS handshake, often 100-300 ms) for every photo.
+# Here every download thread keeps its connection to the photo server open and reuses it,
+# so only the first photo of each thread pays for the handshake. With a system proxy set
+# (corporate networks), plain urllib is used, which knows how to go through the proxy.
+_TLS = threading.local()
+_SSL = ssl.create_default_context()
+_HEADERS = {'User-Agent': 'Mozilla/5.0', 'Connection': 'keep-alive'}
+_USE_URLLIB = bool(urllib.request.getproxies().get('https') or urllib.request.getproxies().get('http'))
+
+
+def _conn(scheme, host):
+    pool = getattr(_TLS, 'conns', None)
+    if pool is None:
+        pool = _TLS.conns = {}
+    key = (scheme, host)
+    c = pool.get(key)
+    if c is None:
+        if scheme == 'https':
+            c = http.client.HTTPSConnection(host, timeout=TIMEOUT_S, context=_SSL)
+        else:
+            c = http.client.HTTPConnection(host, timeout=TIMEOUT_S)
+        pool[key] = c
+    return c
+
+
+def _drop(scheme, host):
+    c = getattr(_TLS, 'conns', {}).pop((scheme, host), None)
+    if c is not None:
+        try:
+            c.close()
+        except Exception:
+            pass
+
+
+def http_get(url, limit=None, on_chunk=None):
+    """GET url on this thread's kept-open connection. Returns the body (bytes).
+    limit: stop after this many bytes (the connection is then closed, not reused).
+    on_chunk(data_so_far) -> True stops early (used by probe() to read only the header)."""
+    if _USE_URLLIB:
+        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        with urllib.request.urlopen(req, timeout=TIMEOUT_S) as r:
+            if limit is None and on_chunk is None:
+                return r.read()
+            return _read_some(r, limit, on_chunk)
+    for _hop in range(5):                                  # follow up to 5 redirects
+        u = urllib.parse.urlsplit(url)
+        scheme, host = u.scheme.lower(), u.netloc
+        if scheme not in ('http', 'https'):
+            raise ValueError('not an http(s) link: %s' % url)
+        path = (u.path or '/') + ('?' + u.query if u.query else '')
+        for fresh in (False, True):                        # a reused connection may have been closed
+            c = _conn(scheme, host)
+            try:
+                c.request('GET', path, headers=_HEADERS)
+                r = c.getresponse()
+                break
+            except (http.client.HTTPException, ConnectionError, socket.timeout, OSError):
+                _drop(scheme, host)
+                if fresh:
+                    raise
+        if r.status in (301, 302, 303, 307, 308) and r.getheader('Location'):
+            r.read()
+            url = urllib.parse.urljoin(url, r.getheader('Location'))
+            continue
+        if r.status != 200:
+            r.read()
+            raise IOError('HTTP %d' % r.status)
+        if limit is None and on_chunk is None:
+            return r.read()
+        data = _read_some(r, limit, on_chunk)
+        _drop(scheme, host)                                # body not fully read -> do not reuse
+        return data
+    raise IOError('too many redirects')
+
+
+def _read_some(r, limit, on_chunk):
+    data = b''
+    while limit is None or len(data) < limit:
+        chunk = r.read(16384)
+        if not chunk:
+            break
+        data += chunk
+        if on_chunk and on_chunk(data):
+            break
+    return data
+
 
 
 def cache_path(url):
@@ -85,9 +177,8 @@ def fetch(url):
     error = None
     for attempt in range(RETRIES):
         try:
-            req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-            with urllib.request.urlopen(req, timeout=TIMEOUT_S) as r:
-                data = r.read()
+            data = http_get(url)
+
             if not is_image_bytes(data[:16]):
                 raise ValueError('reply is not an image (%d bytes, starts %r)' % (len(data), data[:20]))
             path = cache_path(url)

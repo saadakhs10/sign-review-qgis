@@ -35,7 +35,6 @@ PREFETCH_PAGES = 20           # pages ahead downloaded in the background while y
                               # (the next 2 are also cut into thumbnails, ready to show at once)
 THUMB_KEEP = 400              # finished thumbnails kept in memory (~50 MB) - going back is instant
 
-
 # starting values for the relocation (can be changed in the window)
 CAMERA_HFOV_DEG = 90.0        # horizontal field of view of the camera
 SIGN_WIDTH_M    = 0.75        # typical real width of a sign in metres

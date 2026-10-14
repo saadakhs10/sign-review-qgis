@@ -2,6 +2,7 @@
 """One picture tile: checkbox, photo with its box, caption and Map / Street / Near buttons."""
 
 
+from qgis.PyQt.QtCore import Qt
 from qgis.PyQt.QtGui import QPixmap
 from qgis.PyQt.QtWidgets import (QApplication, QVBoxLayout, QHBoxLayout, QLabel,
                                  QPushButton, QFrame, QCheckBox)
@@ -74,7 +75,8 @@ class Tile(QFrame):
         lay.addLayout(btns)
         self.setFixedWidth(THUMB + 12)
         self.refresh()
-        # ── photo arrives later: the tile is shown at once with "loading…", the photo fills in ───
+
+    # ── photo arrives later: the tile is shown at once with "loading…", the photo fills in ───
     def show_loading(self):
         self.img.setPixmap(QPixmap())
         self.img.setText('loading…')
@@ -93,8 +95,6 @@ class Tile(QFrame):
         self.img.setText('')
         self.img.setPixmap(pix)
         self.img.setFixedSize(pix.size())
-
-
 
     def refresh(self):
         sel = self.fid in self.dlg.selected

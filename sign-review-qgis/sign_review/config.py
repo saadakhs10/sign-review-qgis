@@ -30,7 +30,11 @@ MAX_WHOLE_LAYER = 500         # with nothing selected, only load the whole layer
 COLS       = 5                # tiles per row (narrow window so the map stays visible)
 THUMB      = 220              # tile size in pixels
 PAD        = 150              # pixels of context around the box when cropping
-THREADS    = 12               # parallel downloads
+THREADS    = 12               # parallel downloads (each keeps its connection open)
+PREFETCH_PAGES = 20           # pages ahead downloaded in the background while you review
+                              # (the next 2 are also cut into thumbnails, ready to show at once)
+THUMB_KEEP = 400              # finished thumbnails kept in memory (~50 MB) - going back is instant
+
 
 # starting values for the relocation (can be changed in the window)
 CAMERA_HFOV_DEG = 90.0        # horizontal field of view of the camera

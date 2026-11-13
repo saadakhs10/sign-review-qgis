@@ -32,6 +32,12 @@ class SignReviewPlugin:
         self.action.triggered.connect(self.run)
         self.iface.addToolBarIcon(self.action)
         self.iface.addPluginToMenu(MENU, self.action)
+        sep = QAction('Separate cut-off…', self.iface.mainWindow())
+        sep.setToolTip('Split the active layer into cut-off and good detections '
+                       '(selected points only, if any are selected)')
+        sep.triggered.connect(self.run_cutoff_blur)
+        self.iface.addPluginToMenu(MENU, sep)
+        self.links.append(sep)
         for text, url in (('Help and documentation (GitHub)', self.homepage),
                           ('Report an issue', self.tracker)):
             if url:
@@ -48,6 +54,10 @@ class SignReviewPlugin:
             self.iface.removePluginMenu(MENU, a)
         self.iface.removeToolBarIcon(self.action)
         self.action.deleteLater()
+
+    def run_cutoff_blur(self):
+        from .features.f15_cutoff_blur import separate_cutoff_blur
+        separate_cutoff_blur()
 
     def run(self):
         from .app import open_reviewer

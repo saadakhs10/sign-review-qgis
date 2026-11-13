@@ -53,6 +53,8 @@ from ..features.f11_map_street_photo import MapStreetMixin
 from ..features.f12_closest_photos import ClosestPhotosMixin
 from ..features.f13_mark_worked import MarkWorkedMixin
 from ..features.f14_my_best import MyBestMixin
+from ..features.f15_cutoff_blur import CutoffBlurMixin
+from ..features.f16_fast_review import FastReviewMixin
 
 
 class PageSpin(QSpinBox):
@@ -64,7 +66,8 @@ class PageSpin(QSpinBox):
             e.accept()
 
 
-class Reviewer(PhotoDataMixin,      # block 1  fields + photos
+class Reviewer(FastReviewMixin,     # block 16 Finalize, Next area, keys, progress (first)
+               PhotoDataMixin,       # block 1  fields + photos
                DistanceMixin,        # block 2  camera angle + distance
                LeftRightMixin,       # block 3  Left | Right
                SameSignMixin,        # block 4  same sign (DBSCAN)
@@ -76,6 +79,7 @@ class Reviewer(PhotoDataMixin,      # block 1  fields + photos
                MapStreetMixin,       # block 11 Map / Street / full photo
                ClosestPhotosMixin,   # block 12 Closest photos window
                MarkWorkedMixin,      # block 13 colour of relocated points
+               CutoffBlurMixin,      # block 15 ✂ cut-off window (before block 14)
                MyBestMixin,          # block 14 ⭐ My best window
                TileGrid, QDialog):
     """The review window: builds the buttons and the grid, pages through the photos.
@@ -245,6 +249,7 @@ class Reviewer(PhotoDataMixin,      # block 1  fields + photos
         self.finished.connect(self.cleanup)
 
         self.mark_layer(True)
+        self.fast_init()
         self.load_items()
 
     @staticmethod

@@ -14,6 +14,25 @@ from ..core.parsing import parse_boxes, largest_box, to_float
 from ..ui.widgets import wait_for
 
 
+# ── 1.0  direction_badge() : which way the camera was looking ──────────────────────────────
+ARROWS = ('↑', '↗', '→', '↘', '↓', '↙', '←', '↖')
+COMPASS = ('N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW')
+DIR_COLOURS = ('#1565c0', '#2e7d32', '#ef6c00', '#6a1b9a')   # facing N, E, S, W
+
+
+def direction_badge(heading):
+    """Coloured arrow + compass + degrees of the camera heading, e.g. '↗ NE 47°'.
+    Photos of one sign taken from the two driving directions get opposite arrows and
+    different colours (N blue, E green, S orange, W purple)."""
+    if heading is None:
+        return '<span style="color:#9e9e9e">? dir</span>'
+    h = heading % 360.0
+    i = int((h + 22.5) // 45) % 8
+    colour = DIR_COLOURS[int((h + 45) // 90) % 4]
+    return (f'<span style="color:{colour};font-weight:bold">{ARROWS[i]} {COMPASS[i]} '
+            f'{h:.0f}°</span>')
+
+
 class PhotoDataMixin:
     """Reading the layer and the photos - mixed into the review window."""
 
@@ -135,4 +154,5 @@ class PhotoDataMixin:
         a = f'{ang:+.0f}°' if ang is not None else '?°'
         if self.is_opposite(fid):
             a += ' ⇅'
-        return f'fid {fid}  |  {d}  |  {a}' + (f'  |  {extra}' if extra else '')
+        return (f'fid {fid}  |  {direction_badge(self.get_info(fid)["heading"])}  |  {d}  |  {a}'
+                + (f'  |  {extra}' if extra else ''))

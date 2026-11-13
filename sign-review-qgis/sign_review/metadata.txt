@@ -5,7 +5,7 @@ qgisMaximumVersion=4.99
 supportsQt6=True
 description=Review road-sign detections on one screen: photos sorted Left | Right of the camera, one best photo per sign, points moved from the camera to the sign in bulk.
 about=Select a cluster of road-sign detections (points with img_link, boxes, heading, original_x / original_y) and click Sign Review. The plugin shows every photo cropped to its bounding box, sorted Left | Right of the camera, groups the photos of the same physical sign (DBSCAN), highlights the nearest uncut photo of every sign and moves points from the camera to the sign with the camera geometry (heading + angle, distance from the box width), keeping them off the road. Lasso selection, Select all, Relocate, Reset to camera, Delete, Nearby + Snap together, Map, Street View and full-photo view. Pure geometry - no AI models, no cloud: the only network traffic is downloading the photos from the links in your layer.
-version=1.5.8
+version=1.6.0
 author=Saad Ahmed Khan
 email=khansaadahmed10@gmail.com
 homepage=https://github.com/saadakhs10/sign-review-qgis
@@ -17,6 +17,8 @@ icon=icons/icon.png
 experimental=False
 deprecated=False
 changelog=
+    1.6.0 - Faster reviewing: ⚡ Finalize keeps each sign's ★ BEST photo at the sign and deletes its other photos - for the selected signs or the whole page; ★ Make best (blue bar) picks the photo to keep; ⏭ Next area opens the nearest unreviewed points and pans the map, the area after it downloads in the background; progress field sr_status (kept / relocated / checked) with 'n / N reviewed'; every photo shows the camera direction (coloured arrow + compass, e.g. ↓ S 182°) so the same sign seen from the two driving directions is told apart at a glance; 📁 Closest photos shows the 3 photos taken nearest to each sign (CLOSEST_PER_SIGN), never cut off, sorted by camera distance, opens at once and has ★ Make best / ⚡ Finalize sign in its bar; settings and window place remembered; 💾 Auto-save every 5 min with a countdown clock; clicking a photo keeps your place on the page; thumbnails kept on disk (revisits instant), photo cache limited to 5 GB
+    1.5.9 - New: cut-off photos (box touching the photo border) leave the main grid automatically and go to the '✂ Cut-off (N)' window, which opens at once (↩ Back returns one, Select all + Delete removes them); Plugins > Sign Review > Separate cut-off… splits a whole layer into Cut-off boxes / No box / Good layers in one Layers-panel folder. Faster: Delete no longer reloads and regroups the whole review; the slow blur comparison is off (CHECK_BLUR in config.py)
     1.5.8 - Faster pages: tiles appear at once and each photo fills in as it arrives; the page on screen downloads first, the next 2 pages are ready to show instantly and up to 20 pages ahead download while you review; going back to a page is instant; download connections are kept open. Fix: points vanishing and reappearing on zoom / pan (the 'relocated' colour rule was slowing every map redraw) + picture per page 100 and 5 in one row
     1.5.7 - No of tile per page increase to 50 from 24 and total no of tiles shows when nothing selected in whole layer increase from 300 to 500 
     1.5.6 - Fix: a new page now always opens at the top

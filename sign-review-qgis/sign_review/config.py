@@ -22,6 +22,8 @@ CONF_FIELD    = 'confidence'  # detector confidence(s), e.g. "0.9959,0.9927" (op
 EDGE_PX       = 8             # box closer than this to the image border -> "edge" (sign cut off)
 TINY_PX       = 14            # box narrower than this -> "tiny" (too far to trust)
 LOW_CONF      = 0.50          # detector confidence below this -> "low conf"
+CHECK_BLUR    = False         # True = compare sharpness of the photos of a sign ('blurry' note) - slow:
+                              #        it reads every downloaded photo when the review opens / after Delete
 OUTLIER_M     = 3.0           # photo's ray misses its sign's position by more than this -> "off-ray"
 
 
@@ -75,3 +77,16 @@ os.makedirs(CACHE, exist_ok=True)
 HASH_FILE = os.path.join(CACHE, 'sign_hashes.json')
 SHARP_FILE = os.path.join(CACHE, 'sign_sharpness.json')
 WGS84 = QgsCoordinateReferenceSystem('EPSG:4326')
+
+# 📁 Closest photos: at most this many photos per sign (nearest to the sign, never cut off)
+CLOSEST_PER_SIGN = 3
+
+# ── fast review (block 16) ────────────────────────────────────────────────────────────────
+STATUS_FIELD    = 'sr_status'      # progress field added to the layer: kept / relocated / checked
+CLUSTER_M       = 150.0            # ⏭ Next area: unreviewed points within this distance of the start point
+CLUSTER_MAX     = 300              # ... at most this many points per area
+AUTOSAVE_MIN    = 5                # 💾 Auto-save: Save Layer Edits every N minutes (when switched on)
+CACHE_MAX_GB    = 5.0              # full photos kept on disk; the oldest are removed above this (thumbnails stay)
+THUMB_DIR       = os.path.join(CACHE, 'thumbs')   # cropped thumbnails (~10 KB each) - revisits are instant
+TIMING_LOG      = False            # True = print how long open / page / delete / finalize take (Python console)
+

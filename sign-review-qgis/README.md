@@ -48,12 +48,17 @@ Sign Review puts the whole cluster on one screen and does the geometry:
 | ◧ | **Left \| Right columns** | Every photo goes left or right of the camera from its box position: `angle = atan((box centre x − W/2) / focal)` |
 | ▦ | **Lasso selection** | Drag a rectangle over the photos; click, Shift+click and tick boxes also work. Selected points are highlighted on the map |
 | ★ | **Best photo per sign** | Gold frame on the photo **nearest to the camera whose box is not cut off** – one per sign |
-| 📁 | **Closest photos** | A folder-like window with the best photo of every sign |
+| 📁 | **Closest photos** | The 3 photos taken nearest to each sign – never cut off – sorted by camera distance; same controls as the main window (Relocate, Delete, ★ Make best, ⚡ Finalize sign). Every photo stays in the main window too |
 | ➚ | **Relocate** | Moves each selected point from the camera to its sign: bearing = heading + angle, distance = sign width × focal / box width. Points that would land on the road are moved beside the curb |
 | ↺ | **Reset to camera** | Puts points back on `original_x`, `original_y` |
 | 📍 | **Nearby** | Click a point on the map (or **Near** on a tile): a popup lists every point within the distance you set (starts at 1 m) |
 | 🧲 | **Snap together** | Moves the points of one sign onto one spot – the clicked point or their middle |
 | 🗑 | **Delete** | Deletes the selected points in one undo step |
+| ⚡ | **Finalize** | One step per sign: keeps its ★ BEST photo, moves it to the sign and deletes the sign's other photos – for the selected signs or the whole page; **★ Make best** chooses the photo to keep |
+| ⏭ | **Next area** | Opens the nearest points not reviewed yet and pans the map there – no lasso; progress is kept in a field `sr_status` |
+| 🧭 | **Direction** | Every photo shows which way the camera looked – coloured arrow + compass (↑ N, → E, ↓ S, ← W …) – so the same sign seen from both driving directions is told apart at a glance |
+| 💾 | **Auto-save** | Save Layer Edits every 5 minutes, with a countdown clock |
+| ✂ | **Cut-off** | Photos whose box touches the photo border leave the main grid automatically and go to their own window |
 | 🗺 | **Map / Street / full photo** | Pan to the point, open Google Street View at the camera, right-click for the whole photo |
 
 Everything is undoable until **Save Layer Edits**.
@@ -129,9 +134,13 @@ After installing, the **Sign Review** button is on the toolbar (shortcut `Ctrl+S
 2. Click **Sign Review**. Photos download in the background the first time and are cached.
 3. Check the photos (Left | Right, gold frame = best photo per sign); open **📁 Closest photos**
    for one photo per sign.
-4. Select (drag a lasso, click, Shift+click) → **Relocate**, **Reset to camera** or **Delete**.
-5. Use **📍 Nearby** → click a point → **🧲 Snap together** for points of the same sign.
-6. **Save Layer Edits**.
+4. Check the gold ★ BEST photo of each sign (select another photo → **★ Make best** to change it),
+   then **⚡ Finalize page**: one point per sign is kept, at the sign; the rest are deleted.
+5. **⏭ Next area** opens the next unreviewed points – repeat from step 3.
+6. **Save Layer Edits** (or tick **💾 Auto-save**).
+
+Single photos: select (lasso, click, Shift+click) → **Relocate**, **Reset to camera** or **Delete**;
+**📍 Nearby** → **🧲 Snap together** for points of the same sign.
 
 Full guide: [docs/USER_GUIDE.md](docs/USER_GUIDE.md)
 
@@ -183,7 +192,11 @@ sign-review-qgis/
 │   │   ├── f09_nearby_snap.py       #  9  Nearby / Near + Snap together
 │   │   ├── f10_delete.py            # 10  Delete
 │   │   ├── f11_map_street_photo.py  # 11  Map, Street, full photo
-│   │   └── f12_closest_photos.py    # 12  Closest photos window
+│   │   ├── f12_closest_photos.py    # 12  Closest photos window
+│   │   ├── f13_mark_worked.py       # 13  colour of relocated points
+│   │   ├── f14_my_best.py           # 14  ⭐ My best window
+│   │   ├── f15_cutoff_blur.py       # 15  ✂ Cut-off window + Separate cut-off layers
+│   │   └── f16_fast_review.py       # 16  Finalize, Make best, Next area, progress, auto-save
 │   ├── ui/                          # window, tile grid, photo tile, action bar
 │   └── core/                        # downloads, parsing, geometry (DBSCAN, least squares), imaging
 ├── scripts/                         # build_zip.py, build_private.py, run_in_python_console.py

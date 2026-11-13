@@ -248,15 +248,58 @@ Right-click on a tile = the whole photo with its box in red.
 File: `sign_review/features/f12_closest_photos.py`
 
 ```text
-Like opening a folder: one window with the highlighted photo of every sign (block 5),
-sorted Left | Right. Nothing is ticked automatically.
+For every sign: its CLOSEST_PER_SIGN (3) photos taken nearest to the sign, never cut off,
+the ★ BEST always among them; all sorted by camera distance, Left | Right. Nothing leaves the
+main window. Opens at once (photos fill in). Base window of ⭐ My best and ✂ Cut-off.
 ```
 
 | # | Function | What it does |
 | --- | --- | --- |
 | 12.1 | `open_best` | 📁 Closest photos button |
-| 12.2 | `update_best_folder` | count on the button, refresh the window |
-| 12.3 | `BestDialog` | the Closest photos window |
+| 12.2 | `closest_fids` | the 3 nearest uncut photos of every sign, nearest first |
+| 12.3 | `update_best_folder` | count on the button, refresh the window |
+| 12.4 | `BestDialog` | the Closest photos window |
+
+## Block 15 - ✂ Cut-Off Window
+
+File: `sign_review/features/f15_cutoff_blur.py`
+
+```text
+cut off = box closer than EDGE_PX to a photo border (needs only the photo size).
+Review window: cut-off photos leave the main grid -> "✂ Cut-off (N)" window (opens at once,
+photos fill in). Menu "Separate cut-off…": whole layer -> layers in one Layers-panel folder.
+```
+
+| # | Function | What it does |
+| --- | --- | --- |
+| 15.1 | `problem_reason` | 'cut off' or None |
+| 15.2 | `split_picked` | main grid without My best and cut-off photos |
+| 15.3 | `update_my_best` | ✂ button count, refresh the window |
+| 15.4 | `open_problems` / `keep_problems` | the window, ↩ Back |
+| 15.5 | `ProblemDialog` | the ✂ Cut-off window |
+| 15.6–15.9 | `photo_sizes`, `classify`, `make_layers`, `separate_cutoff_blur` | menu tool |
+
+## Block 16 - ⚡ Fast Review
+
+File: `sign_review/features/f16_fast_review.py` (first in the window's list of blocks)
+
+```text
+Finalize: keep ★ BEST of each sign at the sign, delete the sign's other photos.
+Make best (blue bar): the selected photo becomes the sign's ★ BEST.
+Next area: mark this review checked, open the nearest unreviewed points, prefetch the next.
+Progress: field sr_status = kept / relocated / checked (empty = not reviewed).
+Remembered settings, auto-save every 5 min with a countdown, cache trimming, timing log (TIMING_LOG).
+```
+
+| # | Function | What it does |
+| --- | --- | --- |
+| 16.1 | `fast_init` | buttons, remembered settings, cache trim |
+| 16.2 | `_restore_settings` / `_save_settings` | FOV, distances, window place |
+| 16.3 | `ensure_status_field`, `set_status`, `count_progress` | progress field |
+| 16.4 | `finalize_signs` | ⚡ Finalize |
+| 16.5 | `next_area`, `find_area` | ⏭ Next area |
+| 16.6 | `make_best_selected` | ★ Make best |
+| 16.8 | `autosave`, `_show_clock` | 💾 Auto-save and its countdown |
 
 ## Other files
 

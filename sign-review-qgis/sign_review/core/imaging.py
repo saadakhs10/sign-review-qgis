@@ -2,10 +2,13 @@
 """Image maths: look-alike fingerprint (dHash), sharpness (Tenengrad) and
 the thumbnails with the red bounding box."""
 
+import hashlib
+import os
+
 from qgis.PyQt.QtCore import Qt, QRect
 from qgis.PyQt.QtGui import QImage, QImageReader, QPixmap, QPainter, QPen, QColor
 
-from ..config import THUMB, PAD
+from ..config import THUMB, PAD, THUMB_DIR, CACHE, CACHE_MAX_GB
 from .io import fetch, image_size
 from .parsing import largest_box
 
@@ -144,10 +147,61 @@ def render_image(path, boxes, crop=True, size=THUMB):
                       Qt.TransformationMode.SmoothTransformation)
 
 
+def thumb_path(url, boxes):
+    key = f'{url}|{tuple(tuple(b) for b in boxes or ())}|{THUMB}|{PAD}'
+    return os.path.join(THUMB_DIR, hashlib.md5(key.encode()).hexdigest() + '.jpg')
+
+
 def load_thumb(key, url, boxes=None, thumb=True):
     """Worker-thread job of the photo loader: download (or take from cache) + thumbnail.
-    thumb=False: only download into the cache (pages further ahead - no memory used)."""
+    thumb=False: only download into the cache (pages further ahead - no memory used).
+    Every thumbnail is also kept on disk as a small JPEG (~10 KB): next time - also after
+    closing QGIS - it appears at once, without downloading or decoding the photo again."""
+    if thumb and url:
+        tp = thumb_path(url, boxes)
+        if os.path.exists(tp):
+            img = QImage(tp)
+            if not img.isNull():
+                return img
     path = fetch(url)
     if not thumb:
         return None
-    return render_image(path, boxes, True)
+    img = render_image(path, boxes, True)
+    if img is not None and url:
+        try:
+            os.makedirs(THUMB_DIR, exist_ok=True)
+            tmp = '%s.%d.part' % (tp, id(img))
+            if img.save(tmp, 'JPG', 85):
+                os.replace(tmp, tp)
+        except OSError:
+            pass
+    return img
+
+
+def trim_cache(max_gb=CACHE_MAX_GB):
+    """Removes the oldest full photos (*.img) once the cache is bigger than max_gb.
+    Thumbnails and photo sizes stay. Run in a worker thread."""
+    try:
+        files = []
+        for name in os.listdir(CACHE):
+            if name.endswith('.img'):
+                p = os.path.join(CACHE, name)
+                st = os.stat(p)
+                files.append((max(st.st_atime, st.st_mtime), st.st_size, p))
+        total = sum(f[1] for f in files)
+        limit = max_gb * 1024 ** 3
+        if total <= limit:
+            return 0
+        removed = 0
+        for _, size, p in sorted(files):
+            if total <= 0.8 * limit:
+                break
+            try:
+                os.remove(p)
+                total -= size
+                removed += 1
+            except OSError:
+                pass
+        return removed
+    except OSError:
+        return 0

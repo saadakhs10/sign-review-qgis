@@ -9,7 +9,7 @@ import math
 
 from qgis.PyQt.QtGui import QImage
 
-from ..config import (EDGE_PX, TINY_PX, LOW_CONF, OUTLIER_M)
+from ..config import (EDGE_PX, TINY_PX, LOW_CONF, OUTLIER_M, CHECK_BLUR)
 from ..core.io import cached
 from ..core.parsing import largest_box
 from ..core.imaging import (sharpness_image, read_region, box_rect)
@@ -107,7 +107,10 @@ class BestPhotoMixin:
     # ── 5.7  rel_sharpness() : sharpness compared with the sharpest close-up ──────────────────
     def rel_sharpness(self, members):
         """{fid: sharpness / sharpest} for the close-up photos of one sign.
-        Only photos already downloaded are compared (no download just for this)."""
+        Only photos already downloaded are compared (no download just for this).
+        Off unless CHECK_BLUR (config.py): it reads every downloaded photo."""
+        if not CHECK_BLUR:
+            return {}
         near = [f for f in self.near_set(members) if cached(self.get_info(f)['url'])]
         if len(near) < 2:
             return {}
